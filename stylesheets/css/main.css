@@ -1,0 +1,23 @@
+html {
+  padding: 24px;
+  text-align: center;
+  background: #111111; }
+
+h1 {
+  margin-bottom: 0;
+  font: bold 96px sans-serif;
+  text-transform: uppercase;
+  color: #ff4400; }
+
+p {
+  margin-top: 0;
+  font: 18px sans-serif;
+  color: #555555; }
+
+canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -200px 0 0 -200px;
+  border: 24px outset #111111;
+  box-shadow: 0 0 48px black; }

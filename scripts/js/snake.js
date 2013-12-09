@@ -2,77 +2,130 @@
 var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 $(function() {
-  var Snake, canvas, cell, checkCollision, createFood, ctx, d1, d2, dt1, dt2, food, h, h_px, init, paint, paintCell, primary, s1, s1_array, s2, s2_array, score1, score2, secondary, w, w_px;
-  primary = '#f40';
-  secondary = '#333';
-  canvas = $('#canvas');
-  ctx = canvas[0].getContext('2d');
-  w_px = canvas.width();
-  h_px = canvas.height();
-  cell = 10;
-  w = w_px / cell;
-  h = h_px / cell;
-  Snake = (function() {
-    function Snake(direction, load_pos) {
-      this.direction = direction;
-      this.load_pos = load_pos;
-      this.checkCollision = __bind(this.checkCollision, this);
-      this.step = __bind(this.step, this);
-      this.init = __bind(this.init, this);
+  var DOWN, LEFT, Level, PRIMARY, RIGHT, SECONDARY, Snake, UP, init, level, xy;
+  UP = LEFT = -1;
+  DOWN = RIGHT = 1;
+  PRIMARY = '#f40';
+  SECONDARY = '#333';
+  level = [];
+  xy = function(x, y) {
+    return {
+      x: x,
+      y: y,
+      is: function(point) {
+        return this.x === point.x && this.y === point.y;
+      }
+    };
+  };
+  Level = (function() {
+    function Level(canvas, cell) {
+      if (canvas == null) {
+        canvas = $('canvas');
+      }
+      this.cell = cell != null ? cell : 10;
+      this.createFood = __bind(this.createFood, this);
+      this.paint = __bind(this.paint, this);
+      this.paintCell = __bind(this.paintCell, this);
+      this.ctx = canvas[0].getContext('2d');
+      this.px_width = canvas.width();
+      this.px_height = canvas.height();
+      this.width = this.px_width / this.cell;
+      this.height = this.px_height / this.cell;
+      this.createFood();
     }
 
-    Snake.prototype.init = function() {
-      var dir, dir_temp, nodes;
-      nodes = [];
-      dir = this.direction;
-      dir_temp = this.direction;
-      return {
-        score: 0,
-        speed: 5
-      };
+    Level.prototype.paintCell = function(x, y) {
+      this.ctx.fillStyle = PRIMARY;
+      return this.ctx.fillRect(x * this.cell, y * this.cell, this.cell, this.cell);
     };
 
-    Snake.prototype.step = function() {
-      var tail1, x_head, y_head;
-      x_head = this.nodes[0].x;
-      y_head = this.nodes[0].y;
-      this.dir = this.dir_temp;
-      switch (this.dir) {
-        case "right":
-          x_head++;
-          break;
-        case "left":
-          x_head--;
-          break;
-        case "up":
-          y_head--;
-          break;
-        case "down":
-          y_head++;
+    Level.prototype.paint = function() {
+      var node, score_text, snake, _i, _j, _len, _len1, _ref, _ref1;
+      this.ctx.fillStyle = SECONDARY;
+      this.ctx.fillRect(0, 0, this.px_width, this.px_height);
+      _ref = Snake.getPlayers();
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        snake = _ref[_i];
+        snake.step();
+        _ref1 = snake.nodes;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          node = _ref1[_j];
+          this.paintCell(node.x, node.y);
+        }
       }
-      if (checkCollision() === true) {
-        init(0);
-      } else if (lead_x1 === food.x && lead_y1 === food.y) {
-        tail1 = {
-          x: lead_x1,
-          y: lead_y1
-        };
-        score1++;
-        return createFood();
-      } else {
-        tail1 = s1_array.pop();
-        tail1.x = lead_x1;
-        return tail1.y = lead_y1;
-      }
+      this.paintCell(this.food.x, this.food.y);
+      score_text = "Score 1: " + (Snake.getPlayer(1).score) + "     Score 2: " + (Snake.getPlayer(2).score);
+      return this.ctx.fillText(score_text, 5, this.px_height - 5);
     };
 
-    Snake.prototype.checkCollision = function() {
+    Level.prototype.createFood = function() {
+      return this.food = xy(Math.round(Math.random() * (this.width - 1)), Math.round(Math.random() * (this.height - 1)));
+    };
+
+    return Level;
+
+  })();
+  Snake = (function() {
+    /*
+    
+    @direction [x, y]
+      Direction of motion.
+      [1, 0]:  Left
+      [-1, 0]: Right
+      [0, 1]:  Down
+      [0, -1]: Up
+    
+    @load [x, y]
+      Starting position of the tail node.
+      [0, 0] represents the level's top left corner.
+    */
+
+    Snake._players = [];
+
+    Snake.getPlayer = function(num) {
+      return this._players[num - 1];
+    };
+
+    Snake.getPlayers = function() {
+      return this._players;
+    };
+
+    Snake.prototype._buffer_direction = {};
+
+    Snake.prototype._direction = {};
+
+    Snake.prototype._load_direction = {};
+
+    Snake.prototype.getDirection = function() {
+      return this._direction;
+    };
+
+    Snake.prototype.setX = function(x) {
+      return this._buffer_direction = xy(x, 0);
+    };
+
+    Snake.prototype.setY = function(y) {
+      return this._buffer_direction = xy(0, y);
+    };
+
+    Snake.prototype.resetSnakePosition = function() {
+      var i, _i, _results;
+      this._buffer_direction = this._direction = this._load_direction;
+      this.nodes = [];
+      _results = [];
+      for (i = _i = 4; _i >= 0; i = --_i) {
+        _results.push(this.nodes.push(xy(this.load.x + i * this._load_direction.x, this.load.y + i * this._load_direction.y)));
+      }
+      return _results;
+    };
+
+    Snake.prototype.checkCollision = function(point) {
       var node, _i, _len, _ref, _ref1, _ref2;
-      if ((0 <= (_ref = this.x_head) && _ref < w) && (0 <= (_ref1 = this.y_head) && _ref1 < h)) {
+      if ((0 <= (_ref = point.x) && _ref < level.width) && (0 <= (_ref1 = point.y) && _ref1 < level.height)) {
         _ref2 = this.nodes;
         for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
           node = _ref2[_i];
-          if (node.x === this.x_head && node.y === this.y_head) {
+          if (point.is(node)) {
             return true;
           }
         }
@@ -82,192 +135,92 @@ $(function() {
       }
     };
 
+    Snake.prototype.step = function() {
+      var head;
+      this._direction = this._buffer_direction;
+      head = xy(this.nodes[0].x + this.getDirection().x, this.nodes[0].y + this.getDirection().y);
+      if (this.checkCollision(head) === true) {
+        this.resetSnakePosition();
+        this.score = 0;
+      } else {
+        if (head.is(level.food)) {
+          this.score++;
+          level.createFood();
+        } else {
+          this.nodes.pop();
+        }
+        return this.nodes.unshift(head);
+      }
+    };
+
+    function Snake(direction, load) {
+      this.load = load;
+      this.step = __bind(this.step, this);
+      this.checkCollision = __bind(this.checkCollision, this);
+      this.resetSnakePosition = __bind(this.resetSnakePosition, this);
+      this.setY = __bind(this.setY, this);
+      this.setX = __bind(this.setX, this);
+      this.getDirection = __bind(this.getDirection, this);
+      Snake._players.push(this);
+      this._buffer_direction = this._direction = this._load_direction = direction;
+      this.score = 0;
+      this.speed = 5;
+      this.resetSnakePosition();
+    }
+
     return Snake;
 
   })();
-  s1 = new Snake("right", 0);
-  s2 = new Snake("left", 0);
-  d1 = dt1 = 'right';
-  d2 = dt2 = 'left';
-  score1 = 0;
-  score2 = 0;
-  food = '';
-  s1_array = [];
-  s2_array = [];
-  checkCollision = function(x, y, array1, array2) {
-    var full_array, pos, _i, _len;
-    full_array = array1.concat(array2);
-    if ((0 <= x && x < w) && (0 <= y && y < h)) {
-      for (_i = 0, _len = full_array.length; _i < _len; _i++) {
-        pos = full_array[_i];
-        if (pos.x === x && pos.y === y) {
-          return true;
-        }
-      }
-      return false;
-    } else {
-      return true;
-    }
-  };
-  createFood = function() {
-    return food = {
-      x: Math.round(Math.random() * (w - 1)),
-      y: Math.round(Math.random() * (h - 1))
-    };
-  };
-  paintCell = function(x, y) {
-    ctx.fillStyle = primary;
-    return ctx.fillRect(x * cell, y * cell, cell, cell);
-  };
-  paint = function() {
-    var c, lead_x1, lead_x2, lead_y1, lead_y2, score_text, tail1, tail2, _i, _j, _len, _len1;
-    ctx.fillStyle = secondary;
-    ctx.fillRect(0, 0, w_px, h_px);
-    lead_x1 = s1_array[0].x;
-    lead_y1 = s1_array[0].y;
-    lead_x2 = s2_array[0].x;
-    lead_y2 = s2_array[0].y;
-    d1 = dt1;
-    d2 = dt2;
-    switch (d1) {
-      case "right":
-        lead_x1++;
-        break;
-      case "left":
-        lead_x1--;
-        break;
-      case "up":
-        lead_y1--;
-        break;
-      case "down":
-        lead_y1++;
-    }
-    switch (d2) {
-      case "right":
-        lead_x2++;
-        break;
-      case "left":
-        lead_x2--;
-        break;
-      case "up":
-        lead_y2--;
-        break;
-      case "down":
-        lead_y2++;
-    }
-    if (checkCollision(lead_x1, lead_y1, s1_array, s2_array) === true) {
-      init(0);
-      return;
-    } else if (lead_x1 === food.x && lead_y1 === food.y) {
-      tail1 = {
-        x: lead_x1,
-        y: lead_y1
-      };
-      score1++;
-      createFood();
-    } else {
-      tail1 = s1_array.pop();
-      tail1.x = lead_x1;
-      tail1.y = lead_y1;
-    }
-    if (checkCollision(lead_x2, lead_y2, s1_array, s2_array) === true) {
-      init(0);
-      return;
-    } else if (lead_x2 === food.x && lead_y2 === food.y) {
-      tail2 = {
-        x: lead_x2,
-        y: lead_y2
-      };
-      score2++;
-      createFood();
-    } else {
-      tail2 = s2_array.pop();
-      tail2.x = lead_x2;
-      tail2.y = lead_y2;
-    }
-    s1_array.unshift(tail1);
-    s2_array.unshift(tail2);
-    for (_i = 0, _len = s1_array.length; _i < _len; _i++) {
-      c = s1_array[_i];
-      paintCell(c.x, c.y);
-    }
-    for (_j = 0, _len1 = s2_array.length; _j < _len1; _j++) {
-      c = s2_array[_j];
-      paintCell(c.x, c.y);
-    }
-    paintCell(food.x, food.y);
-    score_text = "Score 1: " + score1 + "     Score 2: " + score2;
-    return ctx.fillText(score_text, 5, h_px - 5);
-  };
   $(document).keydown(function(e) {
     switch (e.which) {
-      case 37:
-        if (d1 !== "right") {
-          return dt1 = "left";
-        }
-        break;
-      case 38:
-        if (d1 !== "down") {
-          return dt1 = "up";
-        }
-        break;
-      case 39:
-        if (d1 !== "left") {
-          return dt1 = "right";
-        }
-        break;
-      case 40:
-        if (d1 !== "up") {
-          return dt1 = "down";
-        }
-        break;
       case 65:
-        if (d2 !== "right") {
-          return dt2 = "left";
+        if (Snake.getPlayer(1).getDirection().x !== RIGHT) {
+          return Snake.getPlayer(1).setX(LEFT);
         }
         break;
       case 87:
-        if (d2 !== "down") {
-          return dt2 = "up";
+        if (Snake.getPlayer(1).getDirection().y !== DOWN) {
+          return Snake.getPlayer(1).setY(UP);
         }
         break;
       case 68:
-        if (d2 !== "left") {
-          return dt2 = "right";
+        if (Snake.getPlayer(1).getDirection().x !== LEFT) {
+          return Snake.getPlayer(1).setX(RIGHT);
         }
         break;
       case 83:
-        if (d2 !== "up") {
-          return dt2 = "down";
+        if (Snake.getPlayer(1).getDirection().y !== UP) {
+          return Snake.getPlayer(1).setY(DOWN);
+        }
+        break;
+      case 37:
+        if (Snake.getPlayer(2).getDirection().x !== RIGHT) {
+          return Snake.getPlayer(2).setX(LEFT);
+        }
+        break;
+      case 38:
+        if (Snake.getPlayer(2).getDirection().y !== DOWN) {
+          return Snake.getPlayer(2).setY(UP);
+        }
+        break;
+      case 39:
+        if (Snake.getPlayer(2).getDirection().x !== LEFT) {
+          return Snake.getPlayer(2).setX(RIGHT);
+        }
+        break;
+      case 40:
+        if (Snake.getPlayer(2).getDirection().y !== UP) {
+          return Snake.getPlayer(2).setY(DOWN);
         }
     }
   });
-  init = function(num) {
-    var game_loop, i, _i;
-    s1_array = [];
-    s2_array = [];
-    for (i = _i = 4; _i >= 0; i = --_i) {
-      s1_array.push({
-        x: i,
-        y: 0
-      });
-      s2_array.push({
-        x: w - 1 - i,
-        y: h - 1
-      });
-    }
-    d1 = dt1 = 'right';
-    d2 = dt2 = 'left';
-    score1 = score2 = 0;
-    createFood();
-    if (num === 0) {
-      clearInterval(game_loop);
-    }
-    if (num === 1) {
-      return game_loop = setInterval(paint, 60);
-    }
-  };
-  return init(1);
+  return (init = function() {
+    var game_loop, p1, p2;
+    level = new Level();
+    p1 = new Snake(xy(1, 0), xy(0, 0));
+    p2 = new Snake(xy(-1, 0), xy(level.width - 1, level.height - 1));
+    return game_loop = setInterval(level.paint, 60);
+  })();
 });
 
 /*
