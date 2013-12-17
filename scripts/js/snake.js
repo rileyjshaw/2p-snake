@@ -2,12 +2,7 @@
 var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 $(function() {
-  var DOWN, LEFT, Level, PRIMARY, RIGHT, SECONDARY, Snake, UP, init, level, xy;
-  UP = LEFT = -1;
-  DOWN = RIGHT = 1;
-  PRIMARY = '#f40';
-  SECONDARY = '#333';
-  level = [];
+  var DOWN, KEYCODES, KeyboardController, LEFT, Level, RIGHT, Snake, UP, init, xy;
   xy = function(x, y) {
     return {
       x: x,
@@ -17,31 +12,98 @@ $(function() {
       }
     };
   };
+  UP = xy(0, -1);
+  DOWN = xy(0, 1);
+  LEFT = xy(-1, 0);
+  RIGHT = xy(1, 0);
+  KEYCODES = {
+    LEFT: 37,
+    UP: 38,
+    RIGHT: 39,
+    DOWN: 40,
+    A: 65,
+    D: 68,
+    S: 83,
+    W: 87
+  };
+  KeyboardController = (function() {
+    function KeyboardController() {
+      this.keyState = __bind(this.keyState, this);
+      this.keyEvent = __bind(this.keyEvent, this);
+    }
+
+    KeyboardController.prototype._watched_keys = {};
+
+    KeyboardController.prototype._keys_down = [];
+
+    KeyboardController.prototype.addCombo = function(snake, keys) {
+      var key, _i, _len, _results;
+      _results = [];
+      for (_i = 0, _len = keys.length; _i < _len; _i++) {
+        key = keys[_i];
+        _results.push(this._watched_keys[key] = snake);
+      }
+      return _results;
+    };
+
+    KeyboardController.prototype.keyEvent = function(e, pressed) {
+      var key, key_idx, snake;
+      key = e.which;
+      key_idx = this._keys_down.indexOf(key);
+      if (key_idx !== -1 && pressed === true) {
+        return;
+      }
+      snake = this._watched_keys[key];
+      if (snake != null) {
+        snake.handleKey(key, pressed);
+      }
+      if (pressed === true) {
+        return this._keys_down.push(key);
+      } else {
+        return this._keys_down.splice(key_idx, 1);
+      }
+    };
+
+    KeyboardController.prototype.keyState = function(key) {
+      return _keys_down.indexOf(key !== -1);
+    };
+
+    return KeyboardController;
+
+  })();
   Level = (function() {
-    function Level(canvas, cell) {
+    function Level(canvas, cell, primary, secondary) {
       if (canvas == null) {
         canvas = $('canvas');
       }
       this.cell = cell != null ? cell : 10;
+      this.primary = primary != null ? primary : 'black';
+      this.secondary = secondary != null ? secondary : 'yellow';
       this.createFood = __bind(this.createFood, this);
       this.paint = __bind(this.paint, this);
       this.paintCell = __bind(this.paintCell, this);
+      this.getTime = __bind(this.getTime, this);
       this.ctx = canvas[0].getContext('2d');
       this.px_width = canvas.width();
       this.px_height = canvas.height();
       this.width = this.px_width / this.cell;
       this.height = this.px_height / this.cell;
       this.createFood();
+      this.clock = 0;
     }
 
+    Level.prototype.getTime = function() {
+      return this.clock;
+    };
+
     Level.prototype.paintCell = function(x, y) {
-      this.ctx.fillStyle = PRIMARY;
+      this.ctx.fillStyle = this.primary;
       return this.ctx.fillRect(x * this.cell, y * this.cell, this.cell, this.cell);
     };
 
     Level.prototype.paint = function() {
       var node, score_text, snake, _i, _j, _len, _len1, _ref, _ref1;
-      this.ctx.fillStyle = SECONDARY;
+      this.ctx.fillStyle = this.secondary;
       this.ctx.fillRect(0, 0, this.px_width, this.px_height);
       _ref = Snake.getPlayers();
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -55,7 +117,8 @@ $(function() {
       }
       this.paintCell(this.food.x, this.food.y);
       score_text = "Score 1: " + (Snake.getPlayer(1).score) + "     Score 2: " + (Snake.getPlayer(2).score);
-      return this.ctx.fillText(score_text, 5, this.px_height - 5);
+      this.ctx.fillText(score_text, 5, this.px_height - 5);
+      return this.clock++;
     };
 
     Level.prototype.createFood = function() {
@@ -66,20 +129,6 @@ $(function() {
 
   })();
   Snake = (function() {
-    /*
-    
-    @direction [x, y]
-      Direction of motion.
-      [1, 0]:  Left
-      [-1, 0]: Right
-      [0, 1]:  Down
-      [0, -1]: Up
-    
-    @load [x, y]
-      Starting position of the tail node.
-      [0, 0] represents the level's top left corner.
-    */
-
     Snake._players = [];
 
     Snake.getPlayer = function(num) {
@@ -90,27 +139,78 @@ $(function() {
       return this._players;
     };
 
-    Snake.prototype._buffer_direction = {};
-
     Snake.prototype._direction = {};
 
     Snake.prototype._load_direction = {};
+
+    function Snake(direction, load, up, down, left, right) {
+      this.load = load;
+      this.step = __bind(this.step, this);
+      this.checkCollision = __bind(this.checkCollision, this);
+      this.resetSnakePosition = __bind(this.resetSnakePosition, this);
+      this.handleKey = __bind(this.handleKey, this);
+      this.setSpeed = __bind(this.setSpeed, this);
+      this.getSpeed = __bind(this.getSpeed, this);
+      this.setDirection = __bind(this.setDirection, this);
+      this.getDirection = __bind(this.getDirection, this);
+      Snake._players.push(this);
+      this._direction = this._load_direction = direction;
+      this.score = 0;
+      this._speed = 2;
+      /*
+      -- TODO --
+      Make the directions in a loop.
+      */
+
+      this.keys = {};
+      this.keys[up] = {
+        direction: UP
+      };
+      this.keys[down] = {
+        direction: DOWN
+      };
+      this.keys[left] = {
+        direction: LEFT
+      };
+      this.keys[right] = {
+        direction: RIGHT
+      };
+      key_controller.addCombo(this, [up, down, left, right]);
+      this.resetSnakePosition();
+    }
 
     Snake.prototype.getDirection = function() {
       return this._direction;
     };
 
-    Snake.prototype.setX = function(x) {
-      return this._buffer_direction = xy(x, 0);
+    Snake.prototype.setDirection = function(dir) {
+      if (dir.x * this._direction.x + dir.y * this._direction.y !== -1) {
+        this._direction = dir;
+        return this.setSpeed(1);
+      }
     };
 
-    Snake.prototype.setY = function(y) {
-      return this._buffer_direction = xy(0, y);
+    Snake.prototype.getSpeed = function(speed) {
+      return this._speed;
+    };
+
+    Snake.prototype.setSpeed = function(speed) {
+      return this._speed = speed;
+    };
+
+    Snake.prototype.handleKey = function(key, pressed) {
+      var dir;
+      dir = this.keys[key].direction;
+      if (pressed === true) {
+        return this.setDirection(dir);
+      } else if (dir.is(this.getDirection())) {
+        return this.setSpeed(2);
+      }
     };
 
     Snake.prototype.resetSnakePosition = function() {
       var i, _i, _results;
-      this._buffer_direction = this._direction = this._load_direction;
+      this._direction = this._load_direction;
       this.nodes = [];
       _results = [];
       for (i = _i = 4; _i >= 0; i = --_i) {
@@ -137,89 +237,46 @@ $(function() {
 
     Snake.prototype.step = function() {
       var head;
-      this._direction = this._buffer_direction;
-      head = xy(this.nodes[0].x + this.getDirection().x, this.nodes[0].y + this.getDirection().y);
-      if (this.checkCollision(head) === true) {
-        this.resetSnakePosition();
-        this.score = 0;
-      } else {
-        if (head.is(level.food)) {
-          this.score++;
-          level.createFood();
+      if (level.getTime() % (Math.pow(2, this.getSpeed())) === 0) {
+        head = xy(this.nodes[0].x + this.getDirection().x, this.nodes[0].y + this.getDirection().y);
+        if (this.checkCollision(head) === true) {
+          this.resetSnakePosition();
+          return this.score = Math.max(this.score - 2, 0);
         } else {
-          this.nodes.pop();
+          if (head.is(level.food)) {
+            this.score++;
+            level.createFood();
+          } else {
+            this.nodes.pop();
+          }
+          return this.nodes.unshift(head);
         }
-        return this.nodes.unshift(head);
       }
     };
-
-    function Snake(direction, load) {
-      this.load = load;
-      this.step = __bind(this.step, this);
-      this.checkCollision = __bind(this.checkCollision, this);
-      this.resetSnakePosition = __bind(this.resetSnakePosition, this);
-      this.setY = __bind(this.setY, this);
-      this.setX = __bind(this.setX, this);
-      this.getDirection = __bind(this.getDirection, this);
-      Snake._players.push(this);
-      this._buffer_direction = this._direction = this._load_direction = direction;
-      this.score = 0;
-      this.speed = 5;
-      this.resetSnakePosition();
-    }
 
     return Snake;
 
   })();
-  $(document).keydown(function(e) {
-    switch (e.which) {
-      case 65:
-        if (Snake.getPlayer(1).getDirection().x !== RIGHT) {
-          return Snake.getPlayer(1).setX(LEFT);
-        }
-        break;
-      case 87:
-        if (Snake.getPlayer(1).getDirection().y !== DOWN) {
-          return Snake.getPlayer(1).setY(UP);
-        }
-        break;
-      case 68:
-        if (Snake.getPlayer(1).getDirection().x !== LEFT) {
-          return Snake.getPlayer(1).setX(RIGHT);
-        }
-        break;
-      case 83:
-        if (Snake.getPlayer(1).getDirection().y !== UP) {
-          return Snake.getPlayer(1).setY(DOWN);
-        }
-        break;
-      case 37:
-        if (Snake.getPlayer(2).getDirection().x !== RIGHT) {
-          return Snake.getPlayer(2).setX(LEFT);
-        }
-        break;
-      case 38:
-        if (Snake.getPlayer(2).getDirection().y !== DOWN) {
-          return Snake.getPlayer(2).setY(UP);
-        }
-        break;
-      case 39:
-        if (Snake.getPlayer(2).getDirection().x !== LEFT) {
-          return Snake.getPlayer(2).setX(RIGHT);
-        }
-        break;
-      case 40:
-        if (Snake.getPlayer(2).getDirection().y !== UP) {
-          return Snake.getPlayer(2).setY(DOWN);
-        }
-    }
-  });
   return (init = function() {
+    /*
+    TODO
+    deal with window.yuck
+    */
+
     var game_loop, p1, p2;
-    level = new Level();
-    p1 = new Snake(xy(1, 0), xy(0, 0));
-    p2 = new Snake(xy(-1, 0), xy(level.width - 1, level.height - 1));
-    return game_loop = setInterval(level.paint, 60);
+    window.key_controller = new KeyboardController;
+    window.level = new Level();
+    p1 = new Snake(xy(1, 0), xy(0, 0), KEYCODES.W, KEYCODES.S, KEYCODES.A, KEYCODES.D);
+    p2 = new Snake(xy(-1, 0), xy(level.width - 1, level.height - 1), KEYCODES.UP, KEYCODES.DOWN, KEYCODES.LEFT, KEYCODES.RIGHT);
+    $(document).bind({
+      keydown: function(e) {
+        return key_controller.keyEvent(e, true);
+      },
+      keyup: function(e) {
+        return key_controller.keyEvent(e, false);
+      }
+    });
+    return game_loop = setInterval(level.paint, 16.667);
   })();
 });
 
