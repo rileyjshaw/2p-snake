@@ -49,6 +49,9 @@ $(function() {
     KeyboardController.prototype.keyEvent = function(e, pressed) {
       var key, key_idx, snake;
       key = e.which;
+      if (key === 32) {
+        alert(Snake.getPlayers()[0]);
+      }
       key_idx = this._keys_down.indexOf(key);
       if (key_idx !== -1 && pressed === true) {
         return;
@@ -77,8 +80,8 @@ $(function() {
         canvas = $('canvas');
       }
       this.cell = cell != null ? cell : 10;
-      this.primary = primary != null ? primary : 'black';
-      this.secondary = secondary != null ? secondary : 'yellow';
+      this.primary = primary != null ? primary : '#525252';
+      this.secondary = secondary != null ? secondary : '#f2d435';
       this.createFood = __bind(this.createFood, this);
       this.paint = __bind(this.paint, this);
       this.paintCell = __bind(this.paintCell, this);
@@ -116,7 +119,7 @@ $(function() {
         }
       }
       this.paintCell(this.food.x, this.food.y);
-      score_text = "Score 1: " + (Snake.getPlayer(1).score) + "     Score 2: " + (Snake.getPlayer(2).score);
+      score_text = "Score 1: " + (Snake.getPlayer(1).getScore()) + "     Score 2: " + (Snake.getPlayer(2).getScore());
       this.ctx.fillText(score_text, 5, this.px_height - 5);
       return this.clock++;
     };
@@ -147,15 +150,17 @@ $(function() {
       this.load = load;
       this.step = __bind(this.step, this);
       this.checkCollision = __bind(this.checkCollision, this);
-      this.resetSnakePosition = __bind(this.resetSnakePosition, this);
+      this.reset = __bind(this.reset, this);
       this.handleKey = __bind(this.handleKey, this);
+      this.setScore = __bind(this.setScore, this);
+      this.getScore = __bind(this.getScore, this);
       this.setSpeed = __bind(this.setSpeed, this);
       this.getSpeed = __bind(this.getSpeed, this);
       this.setDirection = __bind(this.setDirection, this);
       this.getDirection = __bind(this.getDirection, this);
       Snake._players.push(this);
       this._direction = this._load_direction = direction;
-      this.score = 0;
+      this._score = 0;
       this._speed = 2;
       /*
       -- TODO --
@@ -176,26 +181,38 @@ $(function() {
         direction: RIGHT
       };
       key_controller.addCombo(this, [up, down, left, right]);
-      this.resetSnakePosition();
+      this.reset();
     }
 
     Snake.prototype.getDirection = function() {
       return this._direction;
     };
 
-    Snake.prototype.setDirection = function(dir) {
-      if (dir.x * this._direction.x + dir.y * this._direction.y !== -1) {
+    Snake.prototype.setDirection = function(dir, reset) {
+      if (reset == null) {
+        reset = false;
+      }
+      if (reset === true || (dir.x * this.getDirection().x + dir.y * this.getDirection().y) !== -1) {
+        console.log('set');
         this._direction = dir;
         return this.setSpeed(1);
       }
     };
 
-    Snake.prototype.getSpeed = function(speed) {
+    Snake.prototype.getSpeed = function() {
       return this._speed;
     };
 
     Snake.prototype.setSpeed = function(speed) {
       return this._speed = speed;
+    };
+
+    Snake.prototype.getScore = function() {
+      return this._score;
+    };
+
+    Snake.prototype.setScore = function(score) {
+      return this._score = score;
     };
 
     Snake.prototype.handleKey = function(key, pressed) {
@@ -208,13 +225,14 @@ $(function() {
       }
     };
 
-    Snake.prototype.resetSnakePosition = function() {
-      var i, _i, _results;
-      this._direction = this._load_direction;
+    Snake.prototype.reset = function() {
+      var i, _i, _ref, _results;
+      this.setDirection(this._load_direction, true);
+      this.setSpeed(2);
       this.nodes = [];
       _results = [];
-      for (i = _i = 4; _i >= 0; i = --_i) {
-        _results.push(this.nodes.push(xy(this.load.x + i * this._load_direction.x, this.load.y + i * this._load_direction.y)));
+      for (i = _i = _ref = this.getScore() + 4; _ref <= 0 ? _i <= 0 : _i >= 0; i = _ref <= 0 ? ++_i : --_i) {
+        _results.push(this.nodes.unshift(xy(this.load.x - i * this._load_direction.x, this.load.y - i * this._load_direction.y)));
       }
       return _results;
     };
@@ -240,11 +258,11 @@ $(function() {
       if (level.getTime() % (Math.pow(2, this.getSpeed())) === 0) {
         head = xy(this.nodes[0].x + this.getDirection().x, this.nodes[0].y + this.getDirection().y);
         if (this.checkCollision(head) === true) {
-          this.resetSnakePosition();
-          return this.score = Math.max(this.score - 2, 0);
+          this.setScore(Math.max(this.getScore() - 2, 0));
+          return this.reset();
         } else {
           if (head.is(level.food)) {
-            this.score++;
+            this.setScore(this.getScore() + 1);
             level.createFood();
           } else {
             this.nodes.pop();

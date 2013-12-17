@@ -34,6 +34,7 @@ $ () ->
 
     keyEvent: (e, pressed) =>
       key = e.which
+      if key is 32 then alert Snake.getPlayers()[0]
       key_idx = @_keys_down.indexOf(key)
       if key_idx isnt -1 and pressed is true
         return
@@ -49,7 +50,7 @@ $ () ->
 
 
   class Level
-    constructor: (canvas = $('canvas'), @cell = 10, @primary = 'black', @secondary = 'yellow') ->
+    constructor: (canvas = $('canvas'), @cell = 10, @primary = '#525252', @secondary = '#f2d435') ->
       @ctx = canvas[0].getContext('2d')
       @px_width = canvas.width()
       @px_height = canvas.height()
@@ -72,7 +73,7 @@ $ () ->
         snake.step()
         @paintCell(node.x, node.y) for node in snake.nodes
       @paintCell @food.x, @food.y
-      score_text = "Score 1: #{Snake.getPlayer(1).score}     Score 2: #{Snake.getPlayer(2).score}"
+      score_text = "Score 1: #{Snake.getPlayer(1).getScore()}     Score 2: #{Snake.getPlayer(2).getScore()}"
       @ctx.fillText score_text, 5, @px_height - 5
       @clock++
 
@@ -89,7 +90,7 @@ $ () ->
 
     @getPlayer: (num) ->
       return @_players[num - 1]
-    @getPlayers: ->
+    @getPlayers: () ->
       return @_players
 
     #- instance variables -#
@@ -99,7 +100,7 @@ $ () ->
     constructor: (direction, @load, up, down, left, right) ->
       Snake._players.push(@)
       @_direction = @_load_direction = direction
-      @score = 0
+      @_score = 0
       @_speed = 2
       ###
       -- TODO --
@@ -116,22 +117,29 @@ $ () ->
         direction: RIGHT
 
       key_controller.addCombo @, [up, down, left, right]
-      @resetSnakePosition()
+      @reset()
 
     #- instance methods -#
     getDirection: =>
       return @_direction
 
-    setDirection: (dir) =>
-      if dir.x * @_direction.x + dir.y * @_direction.y isnt -1
+    setDirection: (dir, reset = false) =>
+      if reset is true or (dir.x * @getDirection().x + dir.y * @getDirection().y) isnt -1
+        console.log 'set'
         @_direction = dir
         @setSpeed 1
 
-    getSpeed: (speed) =>
+    getSpeed: () =>
       return @_speed
 
     setSpeed: (speed) =>
       @_speed = speed
+
+    getScore: () =>
+      return @_score
+
+    setScore: (score) =>
+      @_score = score
 
     handleKey: (key, pressed) =>
       dir = @keys[key].direction
@@ -140,11 +148,12 @@ $ () ->
       else if dir.is @getDirection()
         @setSpeed 2
 
-    resetSnakePosition: =>
-      @_direction = @_load_direction
+    reset: =>
+      @setDirection @_load_direction, true
+      @setSpeed 2
       @nodes = []
-      for i in [4..0]
-        @nodes.push xy @load.x + i * @_load_direction.x, @load.y + i * @_load_direction.y
+      for i in [@getScore() + 4..0]
+        @nodes.unshift xy @load.x - i * @_load_direction.x, @load.y - i * @_load_direction.y
 
     checkCollision: (point) =>
       if 0 <= point.x < level.width and 0 <= point.y < level.height
@@ -163,11 +172,11 @@ $ () ->
         )
 
         if @checkCollision(head) is true
-          @resetSnakePosition()
-          @score = Math.max @score - 2, 0
+          @setScore Math.max(@getScore() - 2, 0)
+          @reset()
         else
           if head.is level.food
-            @score++
+            @setScore @getScore() + 1
             level.createFood()
           else
             @nodes.pop()
