@@ -1,18 +1,22 @@
+$fg: #525252
+$bg: #f2d435
+
 html
   font-family: sans-serif
-  color: #525252
-  background: #f2d435
+  color: $fg
+  background: $bg
 h1, canvas, #scores
   position: absolute
   top: 50%
   left: 50%
   width: 400px
 h1
-  margin: -231px 0 0 -200px
+  margin: -272px 0 0 -200px
+  border-bottom: $fg solid 4px
   text-transform: uppercase
 canvas
   margin: -200px 0 0 -200px
-  border: 1px solid #525252
+  border: 1px solid $bg/2 + $fg/2
 #scores
   margin: 200px 0 0 -200px
   span
