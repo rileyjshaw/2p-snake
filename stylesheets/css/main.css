@@ -1,10 +1,29 @@
 html {
+  font-family: sans-serif;
   color: #525252;
   background: #f2d435; }
 
-canvas {
+h1, canvas, #scores {
   position: absolute;
   top: 50%;
   left: 50%;
+  width: 400px; }
+
+h1 {
+  margin: -231px 0 0 -200px;
+  text-transform: uppercase; }
+
+canvas {
   margin: -200px 0 0 -200px;
   border: 1px solid #525252; }
+
+#scores {
+  margin: 200px 0 0 -200px; }
+  #scores span {
+    font-weight: bold; }
+
+.controls {
+  display: inline-block;
+  width: 60px;
+  font-size: 10px;
+  letter-spacing: 2px; }

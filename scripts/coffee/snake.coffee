@@ -12,6 +12,7 @@ $ () ->
   RIGHT = xy 1, 0
 
   KEYCODES =
+    SPACE: 32
     LEFT: 37
     UP: 38
     RIGHT: 39
@@ -34,11 +35,9 @@ $ () ->
 
     keyEvent: (e, pressed) =>
       key = e.which
-      if key is 32 then alert Snake.getPlayers()[0]
       key_idx = @_keys_down.indexOf(key)
       if key_idx isnt -1 and pressed is true
         return
-
       snake = @_watched_keys[key]
       snake?.handleKey key, pressed
 
@@ -73,8 +72,8 @@ $ () ->
         snake.step()
         @paintCell(node.x, node.y) for node in snake.nodes
       @paintCell @food.x, @food.y
-      score_text = "Score 1: #{Snake.getPlayer(1).getScore()}     Score 2: #{Snake.getPlayer(2).getScore()}"
-      @ctx.fillText score_text, 5, @px_height - 5
+      for score_pair in @score_pairs
+        score_pair[0].innerHTML = score_pair[1].getScore()
       @clock++
 
     createFood: () =>
@@ -82,6 +81,11 @@ $ () ->
         Math.round Math.random() * (@width - 1)
       , Math.round Math.random() * (@height - 1)
       )
+
+    scoreMap: () =>
+      @score_pairs = []
+      for snake, i in Snake.getPlayers()
+        @score_pairs.push [document.getElementById("score#{i + 1}"), snake]
 
 
   class Snake
@@ -99,6 +103,11 @@ $ () ->
 
     constructor: (direction, @load, up, down, left, right) ->
       Snake._players.push(@)
+      ###
+      -- TODO --
+      This is totally redundant with the first few
+      lines of reset()
+      ###
       @_direction = @_load_direction = direction
       @_score = 0
       @_speed = 2
@@ -125,7 +134,6 @@ $ () ->
 
     setDirection: (dir, reset = false) =>
       if reset is true or (dir.x * @getDirection().x + dir.y * @getDirection().y) isnt -1
-        console.log 'set'
         @_direction = dir
         @setSpeed 1
 
@@ -150,6 +158,7 @@ $ () ->
 
     reset: =>
       @setDirection @_load_direction, true
+      @setScore Math.max(@getScore() - 2, 0)
       @setSpeed 2
       @nodes = []
       for i in [@getScore() + 4..0]
@@ -172,7 +181,6 @@ $ () ->
         )
 
         if @checkCollision(head) is true
-          @setScore Math.max(@getScore() - 2, 0)
           @reset()
         else
           if head.is level.food
@@ -191,6 +199,7 @@ $ () ->
     window.level = new Level()
     p1 = new Snake xy(1, 0), xy(0, 0), KEYCODES.W, KEYCODES.S, KEYCODES.A, KEYCODES.D
     p2 = new Snake xy(-1, 0), xy(level.width - 1, level.height - 1), KEYCODES.UP, KEYCODES.DOWN, KEYCODES.LEFT, KEYCODES.RIGHT
+    level.scoreMap()
 
     $(document).bind
       keydown: (e) ->

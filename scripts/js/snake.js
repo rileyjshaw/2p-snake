@@ -17,6 +17,7 @@ $(function() {
   LEFT = xy(-1, 0);
   RIGHT = xy(1, 0);
   KEYCODES = {
+    SPACE: 32,
     LEFT: 37,
     UP: 38,
     RIGHT: 39,
@@ -49,9 +50,6 @@ $(function() {
     KeyboardController.prototype.keyEvent = function(e, pressed) {
       var key, key_idx, snake;
       key = e.which;
-      if (key === 32) {
-        alert(Snake.getPlayers()[0]);
-      }
       key_idx = this._keys_down.indexOf(key);
       if (key_idx !== -1 && pressed === true) {
         return;
@@ -82,6 +80,7 @@ $(function() {
       this.cell = cell != null ? cell : 10;
       this.primary = primary != null ? primary : '#525252';
       this.secondary = secondary != null ? secondary : '#f2d435';
+      this.scoreMap = __bind(this.scoreMap, this);
       this.createFood = __bind(this.createFood, this);
       this.paint = __bind(this.paint, this);
       this.paintCell = __bind(this.paintCell, this);
@@ -105,7 +104,7 @@ $(function() {
     };
 
     Level.prototype.paint = function() {
-      var node, score_text, snake, _i, _j, _len, _len1, _ref, _ref1;
+      var node, score_pair, snake, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
       this.ctx.fillStyle = this.secondary;
       this.ctx.fillRect(0, 0, this.px_width, this.px_height);
       _ref = Snake.getPlayers();
@@ -119,13 +118,28 @@ $(function() {
         }
       }
       this.paintCell(this.food.x, this.food.y);
-      score_text = "Score 1: " + (Snake.getPlayer(1).getScore()) + "     Score 2: " + (Snake.getPlayer(2).getScore());
-      this.ctx.fillText(score_text, 5, this.px_height - 5);
+      _ref2 = this.score_pairs;
+      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+        score_pair = _ref2[_k];
+        score_pair[0].innerHTML = score_pair[1].getScore();
+      }
       return this.clock++;
     };
 
     Level.prototype.createFood = function() {
       return this.food = xy(Math.round(Math.random() * (this.width - 1)), Math.round(Math.random() * (this.height - 1)));
+    };
+
+    Level.prototype.scoreMap = function() {
+      var i, snake, _i, _len, _ref, _results;
+      this.score_pairs = [];
+      _ref = Snake.getPlayers();
+      _results = [];
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        snake = _ref[i];
+        _results.push(this.score_pairs.push([document.getElementById("score" + (i + 1)), snake]));
+      }
+      return _results;
     };
 
     return Level;
@@ -159,6 +173,12 @@ $(function() {
       this.setDirection = __bind(this.setDirection, this);
       this.getDirection = __bind(this.getDirection, this);
       Snake._players.push(this);
+      /*
+      -- TODO --
+      This is totally redundant with the first few
+      lines of reset()
+      */
+
       this._direction = this._load_direction = direction;
       this._score = 0;
       this._speed = 2;
@@ -193,7 +213,6 @@ $(function() {
         reset = false;
       }
       if (reset === true || (dir.x * this.getDirection().x + dir.y * this.getDirection().y) !== -1) {
-        console.log('set');
         this._direction = dir;
         return this.setSpeed(1);
       }
@@ -228,6 +247,7 @@ $(function() {
     Snake.prototype.reset = function() {
       var i, _i, _ref, _results;
       this.setDirection(this._load_direction, true);
+      this.setScore(Math.max(this.getScore() - 2, 0));
       this.setSpeed(2);
       this.nodes = [];
       _results = [];
@@ -258,7 +278,6 @@ $(function() {
       if (level.getTime() % (Math.pow(2, this.getSpeed())) === 0) {
         head = xy(this.nodes[0].x + this.getDirection().x, this.nodes[0].y + this.getDirection().y);
         if (this.checkCollision(head) === true) {
-          this.setScore(Math.max(this.getScore() - 2, 0));
           return this.reset();
         } else {
           if (head.is(level.food)) {
@@ -286,6 +305,7 @@ $(function() {
     window.level = new Level();
     p1 = new Snake(xy(1, 0), xy(0, 0), KEYCODES.W, KEYCODES.S, KEYCODES.A, KEYCODES.D);
     p2 = new Snake(xy(-1, 0), xy(level.width - 1, level.height - 1), KEYCODES.UP, KEYCODES.DOWN, KEYCODES.LEFT, KEYCODES.RIGHT);
+    level.scoreMap();
     $(document).bind({
       keydown: function(e) {
         return key_controller.keyEvent(e, true);
