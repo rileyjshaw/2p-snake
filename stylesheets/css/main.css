@@ -20,11 +20,10 @@ canvas {
 
 #scores {
   margin: 200px 0 0 -200px; }
-  #scores span {
-    font-weight: bold; }
 
 .controls {
   display: inline-block;
   width: 60px;
   font-size: 10px;
+  font-weight: bold;
   letter-spacing: 2px; }
