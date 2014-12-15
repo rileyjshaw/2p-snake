@@ -171,9 +171,11 @@
     function Snake(direction, load, up, down, left, right) {
       this.load = load;
       this.step = __bind(this.step, this);
+      this.checkCollisionPoint = __bind(this.checkCollisionPoint, this);
       this.checkCollision = __bind(this.checkCollision, this);
       this.reset = __bind(this.reset, this);
       this.handleKey = __bind(this.handleKey, this);
+      this.getHead = __bind(this.getHead, this);
       this.setScore = __bind(this.setScore, this);
       this.getScore = __bind(this.getScore, this);
       this.setSpeed = __bind(this.setSpeed, this);
@@ -242,6 +244,10 @@
       return this._score = score;
     };
 
+    Snake.prototype.getHead = function() {
+      return xy(this.nodes[0].x + this.getDirection().x, this.nodes[0].y + this.getDirection().y);
+    };
+
     Snake.prototype.handleKey = function(key, pressed) {
       var dir;
       dir = this.keys[key].direction;
@@ -265,13 +271,16 @@
       return _results;
     };
 
-    Snake.prototype.checkCollision = function(point) {
-      var node, _i, _len, _ref, _ref1, _ref2;
-      if ((0 <= (_ref = point.x) && _ref < level.width) && (0 <= (_ref1 = point.y) && _ref1 < level.height)) {
-        _ref2 = this.nodes;
+    Snake.prototype.checkCollision = function(head) {
+      var snake, _i, _len, _ref, _ref1, _ref2;
+      if ((0 <= (_ref = head.x) && _ref < level.width) && (0 <= (_ref1 = head.y) && _ref1 < level.height)) {
+        _ref2 = Snake.getPlayers();
         for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          node = _ref2[_i];
-          if (point.is(node)) {
+          snake = _ref2[_i];
+          if (snake.checkCollisionPoint(head)) {
+            if (this.checkCollisionPoint(snake.getHead())) {
+              snake.reset();
+            }
             return true;
           }
         }
@@ -281,10 +290,22 @@
       }
     };
 
+    Snake.prototype.checkCollisionPoint = function(point) {
+      var node, _i, _len, _ref;
+      _ref = this.nodes;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        node = _ref[_i];
+        if (point.is(node)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
     Snake.prototype.step = function() {
       var head;
       if (level.getTime() % (Math.pow(2, this.getSpeed())) === 0) {
-        head = xy(this.nodes[0].x + this.getDirection().x, this.nodes[0].y + this.getDirection().y);
+        head = this.getHead();
         if (this.checkCollision(head) === true) {
           return this.reset();
         } else {
