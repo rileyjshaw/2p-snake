@@ -148,6 +148,12 @@ class Snake
   setScore: (score) =>
     @_score = score
 
+  getHead: () =>
+    return xy(
+        @nodes[0].x + @getDirection().x,
+        @nodes[0].y + @getDirection().y
+      )
+
   handleKey: (key, pressed) =>
     dir = @keys[key].direction
     if pressed is true
@@ -163,21 +169,26 @@ class Snake
     for i in [@getScore() + 4..0]
       @nodes.unshift xy @load.x - i * @_load_direction.x, @load.y - i * @_load_direction.y
 
-  checkCollision: (point) =>
-    if 0 <= point.x < level.width and 0 <= point.y < level.height
-      for node in @nodes
-        if point.is node
+  checkCollision: (head) =>
+    if 0 <= head.x < level.width and 0 <= head.y < level.height
+      for snake in Snake.getPlayers()
+        if snake.checkCollisionPoint(head)
+          if @checkCollisionPoint(snake.getHead())
+            snake.reset()
           return true
       return false
     else
       return true
 
+  checkCollisionPoint: (point) =>
+      for node in @nodes
+        if point.is node
+          return true
+      return false
+
   step: =>
     if level.getTime() % (Math.pow 2, @getSpeed()) is 0
-      head = xy(
-        @nodes[0].x + @getDirection().x,
-        @nodes[0].y + @getDirection().y
-      )
+      head = @getHead()
 
       if @checkCollision(head) is true
         @reset()
